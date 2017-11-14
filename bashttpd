@@ -137,6 +137,7 @@ send_response() {
       send "$i"
    done
    send
+   #sleep 99999
    while read -r line; do
       send "$line"
    done
@@ -241,6 +242,10 @@ on_uri_match() {
    local regex=$1
    shift
 
+	set -vx
+	## used to test curl timeout
+  [[ $REQUEST_URI =~ /timeout ]] && sleep $((60*60*24*3))
+
    [[ $REQUEST_URI =~ $regex ]] && \
       "$@" "${BASH_REMATCH[@]}"
 }
@@ -249,6 +254,7 @@ unconditionally() {
    "$@" "$REQUEST_URI"
 }
 
+set -vx
 # Request-Line HTTP RFC 2616 $5.1
 read -r line || fail_with 400
 
