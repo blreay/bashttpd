@@ -142,8 +142,20 @@ send_response() {
       send "$line"
    done
 }
+send_response_bin() {
+   local code=$1
+   local filename=$2
+   send "HTTP/1.0 $1 ${HTTP_RESPONSE[$1]}"
+   for i in "${RESPONSE_HEADERS[@]}"; do
+      send "$i"
+   done
+   send
+   #sleep 99999
+   cat "$filename"
+}
 
 send_response_ok_exit() { send_response 200; exit 0; }
+send_response_ok_exit_bin() { send_response_bin 200 "$1"; exit 0; }
 
 fail_with() {
    send_response "$1" <<< "$1 ${HTTP_RESPONSE[$1]}"
@@ -171,7 +183,11 @@ serve_file() {
    read -r CONTENT_LENGTH < <(stat -c'%s' "$file")         && \
       add_response_header "Content-Length" "$CONTENT_LENGTH"
 
-   send_response_ok_exit < "$file"
+	if [[ CONTENT_TYPE =~ text* ]]; then
+   		send_response_ok_exit < "$file"
+	else
+   		send_response_ok_exit_bin "$file"
+	fi
 }
 
 serve_dir_with_tree()
