@@ -184,8 +184,9 @@ serve_dir_with_tree()
    read x tree_vers x < <(tree --version)
    [[ $tree_vers == v1.6* ]] && tree_opts="--du"
 
+	## fix one bug to list root dir of DOCROOT
    send_response_ok_exit < \
-      <(tree -H "$2" -L 1 "$tree_opts" -D "$dir")
+      <(tree -H "${2%/}" -L 1 $tree_opts -D "$dir")
 }
 
 serve_dir_with_ls()
