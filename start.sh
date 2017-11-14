@@ -1,3 +1,5 @@
 #!/bin/bash
 
-ncat -lp 38080 -e ./bashttpd
+typeset CMD="ncat -lp 38080 -e ./bashttpd"
+echo "${CMD}"
+eval ${CMD}
