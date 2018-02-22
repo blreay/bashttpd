@@ -152,6 +152,9 @@ send_response_bin() {
    send
    #sleep 99999
    cat "$filename"
+   #wait HTTP client to read all data, avoid error "curl: (18) transfer closed with 7680 bytes remaining to read"
+   # equal to "KEEP-ALIVE"
+   sleep 10
 }
 
 send_response_ok_exit() { send_response 200; exit 0; }
