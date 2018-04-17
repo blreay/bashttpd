@@ -1,5 +1,7 @@
 #!/bin/bash
 
-typeset CMD="ncat -lp 38080 -e ./bashttpd"
+port=${1:-38080}
+
+typeset CMD="ncat -lp ${port} -e ./bashttpd"
 echo "${CMD}"
 eval ${CMD}
