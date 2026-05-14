@@ -1,9 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- GitHub Markdown 样式, not use now
+<link rel="stylesheet2" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-light.css">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
+-->
+
+  <!-- GitHub Markdown 样式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.min.css" />
+
+  <style>
+    body {
+      margin: 0;
+      background: #f6f8fa;
+    }
+
+    .markdown-body {
+      box-sizing: border-box;
+      min-width: 200px;
+      max-width: 2980px;
+      margin: 10px auto;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 1767px) {
+      .markdown-body {
+        padding: 15px;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article id="preview" class="markdown-body"></article>
+
+  <!-- marked -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    function extractFirstHeading(markdown) {
+      // 匹配所有标题行：1-6个#后跟空格和标题内容
+      const lines = markdown.split('\n');
+      for (const line of lines) {
+        // 使用正则匹配标题行
+        const match = line.match(/^#{1,6}\s+(.+)/);
+        if (match) {
+          return match[1].trim();
+        }
+      }
+      return 'Markdown 预览器'; // 没有标题时的默认标题
+    }
+
   const file = new URLSearchParams(location.search).get('file');
   fetch(file)
     .then(r => r.text())
     .then(md => {
-      document.body.innerHTML = marked.parse(md);
+      document.title = extractFirstHeading(md);
+      document.getElementById("preview").innerHTML = marked.parse(md);
     });
-</script>
+  </script>
+</body>
+</html>

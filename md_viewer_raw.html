@@ -1,0 +1,9 @@
+<script src="https://cdn.jsdelivr.net/npm/marked@18.0.3/lib/marked.umd.js"></script>
+<script>
+  const file = new URLSearchParams(location.search).get('file');
+  fetch(file)
+    .then(r => r.text())
+    .then(md => {
+      document.body.innerHTML = marked.parse(md);
+    });
+</script>
