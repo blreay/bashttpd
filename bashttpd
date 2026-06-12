@@ -9,6 +9,10 @@
 
 warn() { echo "WARNING: $@" >&2; }
 
+urldecode() {
+   printf '%b' "$(echo "$1" | sed 's/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')"
+}
+
 [ -r bashttpd.conf ] || {
    cat >bashttpd.conf <<'EOF'
 #
@@ -200,7 +204,7 @@ serve_dir_with_tree()
 {
    local dir="$1" tree_vers tree_opts basehref x
 
-   add_response_header "Content-Type" "text/html"
+   add_response_header "Content-Type" "text/html; charset=utf-8"
 
    # The --du option was added in 1.6.0.
    read x tree_vers x < <(tree --version)
@@ -208,7 +212,8 @@ serve_dir_with_tree()
 
 	## fix one bug to list root dir of DOCROOT
    send_response_ok_exit < \
-      <(tree -H "${2%/}" -apsthugDF --dirsfirst  -L 1 $tree_opts -D "$dir")
+      <(tree -H "${2%/}" --charset=utf-8 -apsthugDF --dirsfirst  -L 1 $tree_opts -D "$dir" | \
+         sed '/<h1>Directory Tree<\/h1>/a\\t<a href="../">[&nbsp;..&nbsp;]<\/a><br>')
 }
 
 serve_dir_with_ls()
@@ -239,8 +244,9 @@ serve_dir_or_file_from() {
 
    # trim the parameter in url from GET request, used for markdown viewer by zzy at 2026/05/07
    URL_PATH=${URL_PATH%\?*}
-   # sanitize URL_PATH
-   URL_PATH=${URL_PATH//[^a-zA-Z0-9_~\-\.\/]/}
+   # decode percent-encoded characters (e.g. %E4%B8%AD -> 中) to support Chinese/Unicode filenames
+   URL_PATH=$(urldecode "$URL_PATH")
+   # block path traversal (also catches encoded ..  via %2e%2e since we decode first)
    [[ $URL_PATH == *..* ]] && fail_with 400
 
    # Serve index file if exists in requested directory
