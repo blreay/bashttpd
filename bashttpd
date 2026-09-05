@@ -180,7 +180,7 @@ serve_file() {
      *\.js)
        CONTENT_TYPE="text/javascript"
        ;;
-     *\.md)
+     *\.md|*\.log|*\.txt)
        CONTENT_TYPE="text/markdown; charset=utf-8"
        ;;
      *)
