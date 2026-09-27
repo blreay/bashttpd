@@ -348,7 +348,17 @@ resolve_local_dir() {
             serve_dir|serve_dir_with_tree|serve_dir_with_ls)
                printf '%s' "$2" ;;
             serve_dir_or_file_from)
-               printf '%s/%s' "$2" "${BASH_REMATCH[1]}" ;;
+               # Mirror serve_dir_or_file_from()'s URI->path mapping: strip
+               # query params, percent-decode (non-ASCII URIs arrive encoded,
+               # e.g. %E5%85%AC -> 公), and block path traversal.  Without the
+               # decode, mkdir/upload land in a literal "%XX" named directory.
+               local sub=${BASH_REMATCH[1]%%\?*}
+               sub=$(urldecode "$sub")
+               if [[ $sub == *..* ]]; then
+                  echo "resolve_local_dir: path traversal in URI: $uri" >&2
+                  exit 1
+               fi
+               printf '%s/%s' "$2" "$sub" ;;
             *)
                echo "resolve_local_dir: non-directory command: $cmd" >&2
                exit 1 ;;
