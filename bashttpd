@@ -203,7 +203,7 @@ serve_file() {
 
 serve_dir_with_tree()
 {
-   local dir="$1" tree_vers tree_opts basehref x
+   local dir="$1" tree_vers tree_opts base_href x
 
    add_response_header "Content-Type" "text/html; charset=utf-8"
 
@@ -211,15 +211,22 @@ serve_dir_with_tree()
    read x tree_vers x < <(tree --version)
    [[ $tree_vers == v1.6* ]] && tree_opts="--du"
 
+   # Base URI used for tree hrefs, breadcrumbs, and self-row detection.
+   base_href="${2%%\?*}"; base_href="${base_href%/}"
+
 	## fix one bug to list root dir of DOCROOT
    ## The awk stage injects the breadcrumb / [ .. ] / button lines and
    ## rewrites the tree entry lines as an HTML table with one <td> per
    ## independent column (permissions, user, group, size, date, name),
    ## each left-aligned.  The tree-drawing prefix is kept inside the
-   ## name cell.
+   ## name cell.  Each entry row also carries data-href (its percent-
+   ## encoded name) and a leading selection cell holding a checkbox; the
+   ## header row carries a select-all checkbox plus a (X/Y) count span.
+   ## The row for the current directory itself is marked data-self="1"
+   ## and gets no checkbox so it can never be selected/operated on.
    send_response_ok_exit < \
-      <({ tree -H "${2%/}" --charset=utf-8 -apsthugDF --dirsfirst  -L 1 $tree_opts -D "$dir"; } | \
-         BAS_CRUMBS="$(dir_crumbs "$2")" BAS_CONTROLS="$(dir_controls)" awk '
+      <({ tree -H "$base_href" --charset=utf-8 -apsthugDF --dirsfirst  -L 1 $tree_opts -D "$dir"; } | \
+         BAS_BASE="$base_href" BAS_CRUMBS="$(dir_crumbs "$2")" BAS_CONTROLS="$(dir_controls)" awk '
             {
                line = $0
                if (line ~ /<h1>Directory Tree<\/h1>/) {
@@ -243,15 +250,25 @@ serve_dir_with_tree()
                   if (!intbl) {
                      print "</p>"
                      print "<table cellspacing=\"4\" cellpadding=\"0\">"
-                     print "<tr>" td("permissions") td("user") td("group") td("size") td("date") td("name") "</tr>"
+                     print "<tr>" selcell("<input type=\"checkbox\" id=\"basSelAll\"><span id=\"basSelCount\"></span>") td("permissions") td("user") td("group") td("size") td("date") td("name") "</tr>"
                      intbl = 1
                   }
+                  href = ""
+                  if (match(line, /href="[^"]*"/)) href = substr(line, RSTART + 6, RLENGTH - 7)
+                  hs = href; sub(/\/$/, "", hs)
+                  nh = split(hs, seg, "/")
+                  enc = seg[nh]
+                  isSelf = (hs == ENVIRON["BAS_BASE"]) ? 1 : 0
                   pre = substr(line, 1, p - 1)
                   tail = substr(line, p + q - 1)
                   sub(/^\]/, "", tail)
                   sub(/^(&nbsp;)+/, "", tail)
                   sub(/<br>$/, "", tail)
-                  print "<tr>" td(f[1]) td(f[2]) td(f[3]) td(f[4]) td(f[5] " " f[6] " " f[7]) td(pre " " tail) "</tr>"
+                  if (isSelf) {
+                     print "<tr data-self=\"1\">" selcell("") td(f[1]) td(f[2]) td(f[3]) td(f[4]) td(f[5] " " f[6] " " f[7]) td(pre " " tail) "</tr>"
+                  } else {
+                     print "<tr data-href=\"" enc "\">" selcell("<input type=\"checkbox\" class=\"bas-rowchk\">") td(f[1]) td(f[2]) td(f[3]) td(f[4]) td(f[5] " " f[6] " " f[7]) td(pre " " tail) "</tr>"
+                  }
                   next
                }
                if (intbl) { print "</table>"; intbl = 0 }
@@ -259,6 +276,7 @@ serve_dir_with_tree()
             }
             END { if (intbl) print "</table>" }
             function td(x) { return "<td style=\"text-align:left;white-space:nowrap;padding-right:16px\">" x "</td>" }
+            function selcell(x) { return "<td class=\"bas-selcell\">" x "</td>" }
          ')
 }
 
