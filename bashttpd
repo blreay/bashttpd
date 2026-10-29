@@ -734,6 +734,139 @@ body.bas-manage .bas-selcell input{display:inline-block;}
          })
          .catch(function (e) { status.textContent = 'error: ' + e; });
    }
+
+   // ---- File management mode ----
+   var manageMode = false;
+   function basRows() {
+      return Array.prototype.slice.call(document.querySelectorAll('tr[data-href]'));
+   }
+   function basSelected() {
+      return basRows().filter(function (tr) {
+         var c = tr.querySelector('.bas-rowchk');
+         return c && c.checked;
+      });
+   }
+   function basSelectedNames() {
+      return basSelected().map(function (tr) { return tr.getAttribute('data-href'); });
+   }
+   function basEnable(id, on) {
+      var b = document.getElementById(id);
+      if (b) b.disabled = !on;
+   }
+   function basClipGet() {
+      try { var s = localStorage.getItem('basClipboard'); return s ? JSON.parse(s) : null; }
+      catch (e) { return null; }
+   }
+   function basClipSet(o) { try { localStorage.setItem('basClipboard', JSON.stringify(o)); } catch (e) {} }
+   function basClipClear() { try { localStorage.removeItem('basClipboard'); } catch (e) {} }
+   function basUpdateUI() {
+      var rows = basRows(), total = rows.length, n = basSelected().length;
+      var all = document.getElementById('basSelAll');
+      if (all) {
+         all.disabled = (total === 0);
+         all.checked = (total > 0 && n === total);
+         all.indeterminate = (n > 0 && n < total);
+      }
+      var cnt = document.getElementById('basSelCount');
+      if (cnt) cnt.textContent = '(' + n + '/' + total + ')';
+      var clip = basClipGet();
+      basEnable('basBtnCopy', n >= 1);
+      basEnable('basBtnCut', n >= 1);
+      basEnable('basBtnDelete', n >= 1);
+      basEnable('basBtnRename', n === 1);
+      basEnable('basBtnPaste', !!(clip && clip.files && clip.files.length));
+   }
+   function basEnterManage() {
+      manageMode = true;
+      document.body.classList.add('bas-manage');
+      var b = document.getElementById('basManageBtn'); if (b) b.textContent = '只读';
+      var ab = document.getElementById('basActionBar'); if (ab) ab.style.display = 'block';
+      try { sessionStorage.setItem('basManage', '1'); } catch (e) {}
+   }
+   function basExitManage() {
+      manageMode = false;
+      document.body.classList.remove('bas-manage');
+      var b = document.getElementById('basManageBtn'); if (b) b.textContent = '管理';
+      var ab = document.getElementById('basActionBar'); if (ab) ab.style.display = 'none';
+      basRows().forEach(function (tr) { var c = tr.querySelector('.bas-rowchk'); if (c) c.checked = false; });
+      var all = document.getElementById('basSelAll'); if (all) { all.checked = false; all.indeterminate = false; }
+      try { sessionStorage.removeItem('basManage'); } catch (e) {}
+   }
+   window.basToggleManage = function () {
+      if (manageMode) basExitManage(); else basEnterManage();
+      basUpdateUI();
+   };
+   function basPostReload(action, headers, body, busyMsg) {
+      status.textContent = busyMsg;
+      var h = { 'X-Bas-Action': action }, k;
+      for (k in headers) { if (Object.prototype.hasOwnProperty.call(headers, k)) h[k] = headers[k]; }
+      var opt = { method: 'POST', headers: h };
+      if (body != null) { h['Content-Type'] = 'text/plain'; opt.body = body; }
+      fetch(base, opt).then(function (r) {
+         return r.text().then(function (t) {
+            status.textContent = r.status + ' ' + t;
+            if (r.ok) setTimeout(function () { location.reload(); }, 800);
+            basUpdateUI();
+         });
+      }).catch(function (e) { status.textContent = 'error: ' + e; });
+   }
+   window.basCopy = function () {
+      var names = basSelectedNames();
+      if (!names.length) return;
+      basClipSet({ op: 'copy', dir: base, files: names });
+      status.textContent = '已复制 ' + names.length + ' 项，去目标目录粘贴';
+      basUpdateUI();
+   };
+   window.basCut = function () {
+      var names = basSelectedNames();
+      if (!names.length) return;
+      basClipSet({ op: 'cut', dir: base, files: names });
+      status.textContent = '已剪切 ' + names.length + ' 项，去目标目录粘贴';
+      basUpdateUI();
+   };
+   window.basPaste = function () {
+      var clip = basClipGet();
+      if (!clip || !clip.files || !clip.files.length) return;
+      var body = clip.dir + '\n' + clip.files.join('\n');
+      if (clip.op === 'cut') basClipClear();
+      basPostReload('paste', { 'X-Bas-Op': clip.op }, body, '粘贴 ' + clip.files.length + ' 项 ...');
+   };
+   window.basDelete = function () {
+      var names = basSelectedNames();
+      if (!names.length) return;
+      var disp = names.map(function (n) { try { return decodeURIComponent(n); } catch (e) { return n; } });
+      if (!confirm('确定删除以下 ' + names.length + ' 项？此操作不可恢复：\n' + disp.join('\n'))) return;
+      basPostReload('delete', {}, names.join('\n'), '删除 ' + names.length + ' 项 ...');
+   };
+   window.basRename = function () {
+      var sel = basSelected();
+      if (sel.length !== 1) return;
+      var enc = sel[0].getAttribute('data-href');
+      var cur; try { cur = decodeURIComponent(enc); } catch (e) { cur = enc; }
+      var nn = prompt('重命名为:', cur);
+      if (nn === null) return;
+      if (!nn || /[\/\x00]/.test(nn) || nn === '.' || nn === '..') { status.textContent = '无效名称'; return; }
+      basPostReload('rename', { 'X-Bas-Name': enc, 'X-Bas-New-Name': encodeURIComponent(nn) }, null, '重命名 ' + cur + ' -> ' + nn + ' ...');
+   };
+   function basInitManage() {
+      var all = document.getElementById('basSelAll');
+      if (all) all.addEventListener('change', function () {
+         var ck = all.checked;
+         basRows().forEach(function (tr) { var c = tr.querySelector('.bas-rowchk'); if (c) c.checked = ck; });
+         basUpdateUI();
+      });
+      basRows().forEach(function (tr) {
+         var c = tr.querySelector('.bas-rowchk');
+         if (c) c.addEventListener('change', basUpdateUI);
+      });
+      document.addEventListener('keydown', function (e) {
+         if (e.key === 'Escape' && manageMode) { basExitManage(); basUpdateUI(); }
+      });
+      try { if (sessionStorage.getItem('basManage') === '1') basEnterManage(); } catch (e) {}
+      basUpdateUI();
+   }
+   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', basInitManage);
+   else basInitManage();
 })();
 </script>
 BASHTML
