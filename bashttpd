@@ -455,6 +455,37 @@ bas_do_rename() {
    bas_post_reply 500 "rename failed: $old"
 }
 
+# Copy or cut-paste entries into the directory the requested URI maps to.
+# X-Bas-Op is 'copy' or 'cut'.  The POST body's first line is the source
+# directory URI (percent-encoded, resolved like a request URI); remaining
+# lines are percent-encoded entry names.  Used by the "粘贴" button.
+bas_do_paste() {
+   local src_uri src dst op name ok=0 skip=0 fail=0
+   op="${X_BAS_OP:-}"
+   [[ $op == copy || $op == cut ]] || bas_post_reply 400 "bad op: $op"
+   [[ -n $BODY_FILE ]] || bas_post_reply 400 "empty body"
+   dst=$(resolve_local_dir "$REQUEST_URI") || \
+      bas_post_reply 500 "no directory rule for: $REQUEST_URI"
+   src_uri=$(head -n1 "$BODY_FILE")
+   src=$(resolve_local_dir "$src_uri") || \
+      bas_post_reply 500 "no directory rule for source: $src_uri"
+   while IFS= read -r name || [[ -n $name ]]; do
+      [[ -z $name ]] && continue
+      name=$(urldecode "$name")
+      if [[ -z $name || $name == */* || $name == . || $name == .. ]]; then
+         fail=$((fail + 1)); continue
+      fi
+      [[ -e "${src%/}/$name" ]] || { fail=$((fail + 1)); continue; }
+      [[ -e "${dst%/}/$name" ]] && { skip=$((skip + 1)); continue; }
+      if [[ $op == copy ]]; then
+         cp -a "${src%/}/$name" "${dst%/}/$name" && ok=$((ok + 1)) || fail=$((fail + 1))
+      else
+         mv "${src%/}/$name" "${dst%/}/$name" && ok=$((ok + 1)) || fail=$((fail + 1))
+      fi
+   done < <(tail -n +2 "$BODY_FILE")
+   bas_post_reply 200 "pasted $ok, skipped $skip, failed $fail"
+}
+
 # Favorite paths are stored in favorite.json (a JSON array of URI strings)
 # in the server's working directory.
 FAVORITES_FILE="${FAVORITES_FILE:-favorite.json}"
@@ -744,6 +775,7 @@ if [ "$REQUEST_METHOD" = "POST" ] && [ -n "$X_BAS_ACTION" ]; then
       upload) bas_do_upload ;;
       delete) bas_do_delete ;;
       rename) bas_do_rename ;;
+      paste)  bas_do_paste ;;
       favlist) bas_do_favlist ;;
       favadd)  bas_do_favadd ;;
       *)      bas_post_reply 400 "unknown action: $X_BAS_ACTION" ;;
