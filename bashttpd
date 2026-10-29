@@ -232,7 +232,7 @@ serve_dir_with_tree()
                line = $0
                if (line ~ /<h1>Directory Tree<\/h1>/) {
                   print line
-                  print "\t" ENVIRON["BAS_CRUMBS"] "<br>"
+                  print "\t<span class=\"bas-crumbs\">" ENVIRON["BAS_CRUMBS"] "</span>"
                   print "\t<button style=\"font-family:sans-serif;\" onclick=\"location.href=&#39;../&#39;\">↑ 返回上级</button>"
                   print ENVIRON["BAS_CONTROLS"]
                   next
@@ -619,6 +619,13 @@ body.bas-manage .bas-selcell input{display:inline-block;}
 body.bas-manage #basSelCount{display:inline;}
 #basActionBar button{font-family:sans-serif;}
 #basActionBar button:disabled{color:#aaa;cursor:default;}
+/* Spacing: give the breadcrumb (path) line clear breathing room above the
+   button row, and pull the file table up close under the button row.  The
+   tree-emitted <p> that wraps the crumbs+controls is the only <p> on the
+   page, so tightening its bottom margin is safe. */
+.bas-crumbs{display:block;margin-bottom:16px;}
+p{margin-bottom:6px;}
+table{margin-top:0;}
 </style>
 <div id="basActionBar" style="display:none;position:fixed;left:0;bottom:0;width:100%;box-sizing:border-box;background:#f0f0f0;border-top:1px solid #999;padding:6px 10px;z-index:200;">
   <span style="display:flex;gap:6px;white-space:nowrap;align-items:center;">
@@ -630,7 +637,6 @@ body.bas-manage #basSelCount{display:inline;}
     <button id="basBtnRename" onclick="basRename()">重命名</button>
   </span>
 </div>
-<br>
 <script>
 (function () {
    var base = location.pathname;
