@@ -221,7 +221,8 @@ serve_dir_with_tree()
    ## each left-aligned.  The tree-drawing prefix is kept inside the
    ## name cell.  Each entry row also carries data-href (its percent-
    ## encoded name) and a leading selection cell holding a checkbox; the
-   ## header row carries a select-all checkbox plus a (X/Y) count span.
+   ## header row carries a select-all checkbox.  The (X/Y) count span
+   ## lives in the controls row (after Favorite), not in the table.
    ## The row for the current directory itself (tree's first entry) is
    ## dropped, so the table lists only the directory's children.
    send_response_ok_exit < \
@@ -250,7 +251,7 @@ serve_dir_with_tree()
                   if (!intbl) {
                      print "</p>"
                      print "<table cellspacing=\"4\" cellpadding=\"0\">"
-                     print "<tr>" selcell("<input type=\"checkbox\" id=\"basSelAll\"><span id=\"basSelCount\"></span>") td("permissions") td("user") td("group") td("size") td("date") td("name") "</tr>"
+                     print "<tr>" selcell("<input type=\"checkbox\" id=\"basSelAll\">") td("permissions") td("user") td("group") td("size") td("date") td("name") "</tr>"
                      intbl = 1
                   }
                   href = ""
@@ -600,6 +601,7 @@ dir_controls() {
 <button style="font-family:sans-serif;" onclick="document.getElementById('basFileInput').click()">Upload</button>
 <button style="font-family:sans-serif;" id="basManageBtn" onclick="basToggleManage()">管理</button>
 <button style="font-family:sans-serif;" onclick="basToggleFavMenu(event)">Favorite</button>
+<span id="basSelCount" style="font-family:monospace;"></span>
 <input id="basFileInput" type="file" multiple style="display:none">
 <span id="basStatus" style="font-family:monospace;"></span>
 <style>
