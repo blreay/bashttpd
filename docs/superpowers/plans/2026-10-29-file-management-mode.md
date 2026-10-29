@@ -151,16 +151,16 @@ echo; ls ~/bastest
 ```
 Expected: 回复 `200 deleted 2, failed 0`；`ls` 只剩 `sub`。
 
-- [ ] **Step 8: 验证非法名被拒**
+- [ ] **Step 8: 验证非法名被拒（含 `/` 的名字一律拒删，只删合法的单段名）**
 
 Run:
 ```bash
-echo hi > ~/bastest/keep.txt
-printf '../evil\nsub/c.txt\n/abs\n' | curl -s -X POST "http://localhost:8099/myhome/bastest/" \
+echo hi > ~/bastest/keep.txt; echo bye > ~/bastest/del.txt
+printf '../evil\ndel.txt\n/abs\n' | curl -s -X POST "http://localhost:8099/myhome/bastest/" \
   -H 'X-Bas-Action: delete' --data-binary @-
-echo; ls ~/bastest; ls ~/bastest/sub
+echo; ls ~/bastest; test -e ~/evil && echo "ESCAPED!" || echo "no escape"
 ```
-Expected: 回复 `200 deleted 1, failed 2`（只有 `sub/c.txt` 被删）；`~/bastest` 仍有 `keep.txt sub`；`~/bastest/sub` 为空；`$HOME/evil`、`/abs` 未被触碰。
+Expected: 回复 `200 deleted 1, failed 2`——只有合法的单段名 `del.txt` 被删；`../evil` 与 `/abs` 含 `/` 被拒（计入 failed）。`~/bastest` 仍有 `keep.txt sub`、无 `del.txt`；输出 `no escape`（`$HOME/evil` 未被创建）。注意：管理模式只对当前目录的直接条目操作，名字永远是单段、不含 `/`，故含 `/` 的名字属于非法输入。
 
 - [ ] **Step 9: Commit**
 
