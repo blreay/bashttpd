@@ -338,7 +338,11 @@ serve_static_string() {
 bas_post_reply() {
    local body="$3"
    [[ -n $body ]] || body="$1 ${HTTP_RESPONSE[$1]}: $2"
-   add_response_header "Content-Length" "${#body}"
+   # Content-Length must be a BYTE count, not a character count: ${#body}
+   # counts characters under a UTF-8 locale, which truncates multibyte
+   # (e.g. Chinese) replies at the client.  Use wc -c for the byte length.
+   local body_len=$(( $(printf '%s' "$body" | wc -c) ))
+   add_response_header "Content-Length" "$body_len"
    add_response_header "Connection" "close"
    send "HTTP/1.0 $1 ${HTTP_RESPONSE[$1]}"
    local h
