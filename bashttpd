@@ -433,6 +433,28 @@ bas_do_delete() {
    bas_post_reply 200 "deleted $ok, failed $fail"
 }
 
+# Rename a single entry.  Old name arrives percent-encoded in X-Bas-Name,
+# new name in X-Bas-New-Name.  Used by the "重命名" button in manage mode.
+bas_do_rename() {
+   local dir old new
+   old=$(urldecode "${X_BAS_NAME:-}")
+   new=$(urldecode "${X_BAS_NEW_NAME:-}")
+   if [[ -z $old || $old == */* || $old == . || $old == .. ]]; then
+      bas_post_reply 400 "bad old name: $old"
+   fi
+   if [[ -z $new || $new == */* || $new == . || $new == .. ]]; then
+      bas_post_reply 400 "bad new name: $new"
+   fi
+   dir=$(resolve_local_dir "$REQUEST_URI") || \
+      bas_post_reply 500 "no directory rule for: $REQUEST_URI"
+   [[ -e "${dir%/}/$old" ]] || bas_post_reply 404 "not found: $old"
+   [[ -e "${dir%/}/$new" ]] && bas_post_reply 403 "already exists: $new"
+   if mv "${dir%/}/$old" "${dir%/}/$new"; then
+      bas_post_reply 200 "renamed: $old -> $new"
+   fi
+   bas_post_reply 500 "rename failed: $old"
+}
+
 # Favorite paths are stored in favorite.json (a JSON array of URI strings)
 # in the server's working directory.
 FAVORITES_FILE="${FAVORITES_FILE:-favorite.json}"
@@ -721,6 +743,7 @@ if [ "$REQUEST_METHOD" = "POST" ] && [ -n "$X_BAS_ACTION" ]; then
       mkdir)  bas_do_mkdir ;;
       upload) bas_do_upload ;;
       delete) bas_do_delete ;;
+      rename) bas_do_rename ;;
       favlist) bas_do_favlist ;;
       favadd)  bas_do_favadd ;;
       *)      bas_post_reply 400 "unknown action: $X_BAS_ACTION" ;;
