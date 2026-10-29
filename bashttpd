@@ -595,9 +595,26 @@ dir_controls() {
 <span style="display:inline-block;width:96px;"></span>
 <button style="font-family:sans-serif;" onclick="basMkdir()">CreateDir</button>
 <button style="font-family:sans-serif;" onclick="document.getElementById('basFileInput').click()">Upload</button>
+<button style="font-family:sans-serif;" id="basManageBtn" onclick="basToggleManage()">管理</button>
 <button style="font-family:sans-serif;" onclick="basToggleFavMenu(event)">Favorite</button>
 <input id="basFileInput" type="file" multiple style="display:none">
 <span id="basStatus" style="font-family:monospace;"></span>
+<style>
+.bas-selcell input{display:none;}
+body.bas-manage .bas-selcell input{display:inline-block;}
+#basActionBar button{font-family:sans-serif;}
+#basActionBar button:disabled{color:#aaa;cursor:default;}
+</style>
+<div id="basActionBar" style="display:none;position:fixed;left:0;bottom:0;width:100%;box-sizing:border-box;background:#f0f0f0;border-top:1px solid #999;padding:6px 10px;z-index:200;">
+  <span style="display:flex;gap:6px;white-space:nowrap;align-items:center;">
+    <button onclick="basMkdir()">新文件夹</button>
+    <button id="basBtnCopy" onclick="basCopy()">复制</button>
+    <button id="basBtnCut" onclick="basCut()">剪切</button>
+    <button id="basBtnPaste" onclick="basPaste()">粘贴</button>
+    <button id="basBtnDelete" onclick="basDelete()">删除</button>
+    <button id="basBtnRename" onclick="basRename()">重命名</button>
+  </span>
+</div>
 <br>
 <script>
 (function () {
