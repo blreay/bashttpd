@@ -222,8 +222,8 @@ serve_dir_with_tree()
    ## name cell.  Each entry row also carries data-href (its percent-
    ## encoded name) and a leading selection cell holding a checkbox; the
    ## header row carries a select-all checkbox plus a (X/Y) count span.
-   ## The row for the current directory itself is marked data-self="1"
-   ## and gets no checkbox so it can never be selected/operated on.
+   ## The row for the current directory itself (tree's first entry) is
+   ## dropped, so the table lists only the directory's children.
    send_response_ok_exit < \
       <({ tree -H "$base_href" --charset=utf-8 -apsthugDF --dirsfirst  -L 1 $tree_opts -D "$dir"; } | \
          BAS_BASE="$base_href" BAS_CRUMBS="$(dir_crumbs "$2")" BAS_CONTROLS="$(dir_controls)" awk '
@@ -264,11 +264,10 @@ serve_dir_with_tree()
                   sub(/^\]/, "", tail)
                   sub(/^(&nbsp;)+/, "", tail)
                   sub(/<br>$/, "", tail)
-                  if (isSelf) {
-                     print "<tr data-self=\"1\">" selcell("") td(f[1]) td(f[2]) td(f[3]) td(f[4]) td(f[5] " " f[6] " " f[7]) td(pre " " tail) "</tr>"
-                  } else {
-                     print "<tr data-href=\"" enc "\">" selcell("<input type=\"checkbox\" class=\"bas-rowchk\">") td(f[1]) td(f[2]) td(f[3]) td(f[4]) td(f[5] " " f[6] " " f[7]) td(pre " " tail) "</tr>"
-                  }
+                  ## tree lists the current directory itself as the first
+                  ## entry; drop that row so the table starts at its children.
+                  if (isSelf) next
+                  print "<tr data-href=\"" enc "\">" selcell("<input type=\"checkbox\" class=\"bas-rowchk\">") td(f[1]) td(f[2]) td(f[3]) td(f[4]) td(f[5] " " f[6] " " f[7]) td(pre " " tail) "</tr>"
                   next
                }
                if (intbl) { print "</table>"; intbl = 0 }
@@ -606,6 +605,8 @@ dir_controls() {
 <style>
 .bas-selcell input{display:none;}
 body.bas-manage .bas-selcell input{display:inline-block;}
+#basSelCount{display:none;}
+body.bas-manage #basSelCount{display:inline;}
 #basActionBar button{font-family:sans-serif;}
 #basActionBar button:disabled{color:#aaa;cursor:default;}
 </style>
