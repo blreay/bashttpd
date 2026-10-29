@@ -865,6 +865,17 @@ body.bas-manage #basSelCount{display:inline;}
       basRows().forEach(function (tr) {
          var c = tr.querySelector('.bas-rowchk');
          if (c) c.addEventListener('change', basUpdateUI);
+         // In manage mode, clicking anywhere on the row toggles its
+         // selection.  Two exceptions keep their normal behavior: a click
+         // on the checkbox itself (the browser toggles it natively) and a
+         // click on the name link (still navigates into / opens the item).
+         tr.addEventListener('click', function (e) {
+            if (!manageMode) return;
+            var t = e.target;
+            if (t === c) return;
+            if (t.closest && t.closest('a')) return;
+            if (c) { c.checked = !c.checked; basUpdateUI(); }
+         });
       });
       document.addEventListener('keydown', function (e) {
          if (e.key === 'Escape' && manageMode) { basExitManage(); basUpdateUI(); }
