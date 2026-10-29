@@ -414,6 +414,25 @@ bas_do_upload() {
    bas_post_reply 500 "upload failed: $target"
 }
 
+# Delete selected entries from the directory the requested URI maps to.
+# The POST body carries one percent-encoded name per line.  Used by the
+# "删除" button in manage mode.
+bas_do_delete() {
+   local dir name ok=0 fail=0
+   [[ -n $BODY_FILE ]] || bas_post_reply 400 "empty body"
+   dir=$(resolve_local_dir "$REQUEST_URI") || \
+      bas_post_reply 500 "no directory rule for: $REQUEST_URI"
+   while IFS= read -r name || [[ -n $name ]]; do
+      [[ -z $name ]] && continue
+      name=$(urldecode "$name")
+      if [[ -z $name || $name == */* || $name == . || $name == .. ]]; then
+         fail=$((fail + 1)); continue
+      fi
+      if rm -rf "${dir%/}/$name"; then ok=$((ok + 1)); else fail=$((fail + 1)); fi
+   done < "$BODY_FILE"
+   bas_post_reply 200 "deleted $ok, failed $fail"
+}
+
 # Favorite paths are stored in favorite.json (a JSON array of URI strings)
 # in the server's working directory.
 FAVORITES_FILE="${FAVORITES_FILE:-favorite.json}"
@@ -680,6 +699,8 @@ while read -r line; do
       "Content-Length: "*) CONTENT_LENGTH="${line#Content-Length: }" ;;
       "X-Bas-Action: "*) X_BAS_ACTION="${line#X-Bas-Action: }" ;;
       "X-Bas-Name: "*) X_BAS_NAME="${line#X-Bas-Name: }" ;;
+      "X-Bas-New-Name: "*) X_BAS_NEW_NAME="${line#X-Bas-New-Name: }" ;;
+      "X-Bas-Op: "*) X_BAS_OP="${line#X-Bas-Op: }" ;;
    esac
    REQUEST_HEADERS+=("$line")
 done
@@ -699,6 +720,7 @@ if [ "$REQUEST_METHOD" = "POST" ] && [ -n "$X_BAS_ACTION" ]; then
    case "$X_BAS_ACTION" in
       mkdir)  bas_do_mkdir ;;
       upload) bas_do_upload ;;
+      delete) bas_do_delete ;;
       favlist) bas_do_favlist ;;
       favadd)  bas_do_favadd ;;
       *)      bas_post_reply 400 "unknown action: $X_BAS_ACTION" ;;
