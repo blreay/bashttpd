@@ -215,7 +215,7 @@ serve_dir_with_tree()
    base_href="${2%%\?*}"; base_href="${base_href%/}"
 
 	## fix one bug to list root dir of DOCROOT
-   ## The awk stage injects the breadcrumb / [ .. ] / button lines and
+   ## The awk stage injects the breadcrumb / 返回上级 button / controls and
    ## rewrites the tree entry lines as an HTML table with one <td> per
    ## independent column (permissions, user, group, size, date, name),
    ## each left-aligned.  The tree-drawing prefix is kept inside the
@@ -233,7 +233,7 @@ serve_dir_with_tree()
                if (line ~ /<h1>Directory Tree<\/h1>/) {
                   print line
                   print "\t" ENVIRON["BAS_CRUMBS"] "<br>"
-                  print "\t<a href=\"../\">[&nbsp;..&nbsp;]</a>"
+                  print "\t<button style=\"font-family:sans-serif;\" onclick=\"location.href=&#39;../&#39;\">↑ 返回上级</button>"
                   print ENVIRON["BAS_CONTROLS"]
                   next
                }
@@ -577,14 +577,22 @@ bas_do_favadd() {
 # segment links to its prefix directory, e.g. for /myhome/work/cubenet
 # clicking "work" goes to /myhome/work.
 dir_crumbs() {
-   local uri="${1%%\?*}" seg cur="" out='<a href="/">/</a>'
+   local uri="${1%%\?*}" seg cur="" out='<a href="/">/</a>' first=1
    local -a parts
    uri="${uri%/}"
    IFS='/' read -ra parts <<< "$uri"
    for seg in "${parts[@]}"; do
       [[ -z $seg ]] && continue
       cur="$cur/$seg"
-      out="$out/<a href=\"$cur/\">$(urldecode "$seg")</a>"
+      # The root crumb already renders the leading "/", so the first
+      # segment attaches directly; later segments get a "/" separator.
+      # (Appending "/" before every segment produced "//myhome/...".)
+      if [[ $first == 1 ]]; then
+         out="$out<a href=\"$cur/\">$(urldecode "$seg")</a>"
+         first=0
+      else
+         out="$out/<a href=\"$cur/\">$(urldecode "$seg")</a>"
+      fi
    done
    printf '%s' "$out"
 }
