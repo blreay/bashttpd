@@ -607,6 +607,7 @@ dir_controls() {
 <span style="display:inline-block;width:96px;"></span>
 <button style="font-family:sans-serif;" onclick="basMkdir()">CreateDir</button>
 <button style="font-family:sans-serif;" onclick="document.getElementById('basFileInput').click()">Upload</button>
+<button style="font-family:sans-serif;" onclick="location.reload()">刷新</button>
 <button style="font-family:sans-serif;" id="basManageBtn" onclick="basToggleManage()">管理</button>
 <button style="font-family:sans-serif;" onclick="basToggleFavMenu(event)">Favorite</button>
 <span id="basSelCount" style="font-family:monospace;"></span>
